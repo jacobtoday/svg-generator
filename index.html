@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vector Studio</title>
+
+<!-- ================================================================== -->
+<!--  THEME — the ONLY block you edit to reskin for a new client.        -->
+<!--  Change name, logo, tagline, and accent. Everything else adapts.    -->
+<!-- ================================================================== -->
+<script>
+  window.THEME = {
+    brandName: "Vector Studio",
+    // logoUrl: paste an image URL or a data: URI. Leave "" to use the wordmark.
+    logoUrl: "",
+    tagline: "Brand-true vector graphics, on demand",
+    accent: "#3A4DE0",        // the one colour that defines the skin
+    accentInk: "#FFFFFF",     // text/icon colour on top of the accent
+    // Optional type overrides:
+    fontUrl: "https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&display=swap",
+    fontFamily: "'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+  };
+</script>
+
+<style>
+  :root{
+    --bg:#FAFAFC;
+    --panel:#FFFFFF;
+    --ink:#16181D;
+    --muted:#6B7180;
+    --faint:#9AA0AE;
+    --line:#E7E8EC;
+    --line-strong:#D7D9DF;
+    --grid:#EDEEF2;
+    --accent:#3A4DE0;
+    --accent-ink:#FFFFFF;
+    --accent-wash:rgba(58,77,224,.08);
+    --danger:#B42318;
+    --danger-wash:#FEF3F2;
+    --ok:#067647;
+    --font:'Inter',system-ui,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --radius:14px;
+    --radius-sm:9px;
+    --shadow:0 1px 2px rgba(20,24,40,.04),0 8px 28px -16px rgba(20,24,40,.18);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:var(--font);
+    color:var(--ink);
+    background:
+      radial-gradient(circle at 1px 1px, var(--grid) 1px, transparent 0) 0 0/22px 22px,
+      var(--bg);
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+  a{color:inherit}
+  button{font-family:inherit}
+  ::selection{background:var(--accent-wash)}
+
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--faint);
+  }
+
+  /* ---- Top bar ---- */
+  .topbar{
+    position:sticky;top:0;z-index:20;
+    display:flex;align-items:center;gap:18px;
+    padding:14px 24px;
+    background:rgba(250,250,252,.82);
+    backdrop-filter:saturate(1.4) blur(8px);
+    border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex;align-items:center;gap:11px;min-width:0}
+  .brand__mark{
+    width:30px;height:30px;border-radius:8px;flex:none;
+    background:var(--accent);color:var(--accent-ink);
+    display:grid;place-items:center;
+    box-shadow:0 2px 8px -2px var(--accent-wash);
+  }
+  .brand__mark svg{width:17px;height:17px}
+  .brand__logo{height:26px;width:auto;display:block}
+  .brand__name{font-weight:600;font-size:15px;letter-spacing:-.01em;white-space:nowrap}
+
+  .nav{display:flex;gap:4px;margin-left:8px}
+  .nav__btn{
+    border:0;background:transparent;cursor:pointer;
+    padding:7px 13px;border-radius:8px;
+    font-size:13.5px;font-weight:500;color:var(--muted);
+  }
+  .nav__btn:hover{color:var(--ink);background:var(--accent-wash)}
+  .nav__btn.is-active{color:var(--accent);background:var(--accent-wash)}
+
+  .topbar__right{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .badge{
+    display:inline-flex;align-items:center;gap:7px;
+    font-size:12px;color:var(--muted);
+    border:1px solid var(--line);border-radius:999px;
+    padding:5px 11px;background:var(--panel);
+  }
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--faint);flex:none}
+  .dot.is-ok{background:var(--ok)}
+  .dot.is-bad{background:var(--danger)}
+
+  /* ---- Layout ---- */
+  main{max-width:1100px;margin:0 auto;padding:40px 24px 80px}
+  .view{display:none}
+  .view.is-active{display:block;animation:rise .35s ease both}
+  @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .stack{display:flex;flex-direction:column;gap:14px}
+  .head{margin-bottom:26px}
+  .head h1{
+    font-size:30px;line-height:1.15;letter-spacing:-.02em;
+    margin:8px 0 6px;font-weight:650;
+  }
+  .head p{margin:0;color:var(--muted);max-width:54ch}
+
+  .panel{
+    background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--radius);box-shadow:var(--shadow);
+  }
+  .panel--pad{padding:22px}
+
+  /* ---- Create ---- */
+  .composer{padding:6px}
+  .composer textarea{
+    width:100%;border:0;resize:vertical;min-height:104px;
+    padding:16px;font-size:16px;line-height:1.5;color:var(--ink);
+    background:transparent;border-radius:10px;
+  }
+  .composer textarea:focus{outline:none}
+  .composer textarea::placeholder{color:var(--faint)}
+
+  .composer__bar{
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    padding:12px 14px;border-top:1px solid var(--line);
+  }
+  .field-label{font-size:12px;color:var(--muted);margin-right:-6px}
+
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--bg)}
+  .seg button{
+    border:0;background:transparent;cursor:pointer;
+    width:34px;height:32px;font-size:13.5px;font-weight:500;color:var(--muted);
+    border-right:1px solid var(--line);
+  }
+  .seg button:last-child{border-right:0}
+  .seg button.is-active{background:var(--accent);color:var(--accent-ink)}
+
+  select.input{
+    appearance:none;border:1px solid var(--line);border-radius:9px;
+    background:var(--bg);padding:7px 30px 7px 11px;font-size:13.5px;color:var(--ink);
+    cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%236B7180' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 10px center;
+  }
+
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;justify-content:center;
+    border:1px solid var(--line);background:var(--panel);color:var(--ink);
+    padding:9px 15px;border-radius:9px;font-size:13.5px;font-weight:550;cursor:pointer;
+    transition:background .12s,border-color .12s,transform .04s;
+  }
+  .btn:hover{border-color:var(--line-strong);background:var(--bg)}
+  .btn:active{transform:translateY(1px)}
+  .btn--primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .btn--primary:hover{filter:brightness(1.05);background:var(--accent)}
+  .btn--ghost{border-color:transparent;background:transparent;color:var(--muted)}
+  .btn--ghost:hover{background:var(--accent-wash);color:var(--accent)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn--go{margin-left:auto}
+
+  .kit-chip{
+    display:inline-flex;align-items:center;gap:8px;margin-top:14px;
+    font-size:13px;color:var(--muted);
+  }
+  .kit-chip b{color:var(--ink);font-weight:600}
+  .kit-chip a{color:var(--accent);cursor:pointer;text-decoration:none;font-weight:500}
+  .kit-chip a:hover{text-decoration:underline}
+
+  /* ---- Results grid ---- */
+  .results{margin-top:30px}
+  .results__head{display:flex;align-items:baseline;gap:10px;margin-bottom:14px}
+  .results__head .eyebrow{margin:0}
+  .grid{
+    display:grid;gap:16px;
+    grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  }
+  .tile{
+    border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);
+    overflow:hidden;display:flex;flex-direction:column;
+    animation:rise .4s ease both;
+  }
+  .tile__art{
+    aspect-ratio:1;width:100%;
+    background:
+      radial-gradient(circle at 1px 1px, var(--grid) 1px, transparent 0) 0 0/18px 18px,
+      var(--panel);
+    border-bottom:1px solid var(--line);
+  }
+  .tile__art iframe{width:100%;height:100%;border:0;display:block}
+  .tile__bar{display:flex;gap:6px;padding:10px}
+  .tile__bar .btn{flex:1;padding:7px 8px;font-size:12.5px}
+
+  .skeleton .tile__art{
+    background:linear-gradient(100deg,var(--bg) 30%,var(--grid) 50%,var(--bg) 70%);
+    background-size:200% 100%;animation:shimmer 1.3s linear infinite;
+  }
+  @keyframes shimmer{to{background-position:-200% 0}}
+
+  /* ---- Notices ---- */
+  .notice{
+    border-radius:var(--radius-sm);padding:13px 15px;font-size:13.5px;
+    border:1px solid var(--line);background:var(--bg);color:var(--muted);
+  }
+  .notice--error{border-color:#FECDCA;background:var(--danger-wash);color:var(--danger)}
+  .empty{
+    text-align:center;color:var(--muted);padding:54px 20px;
+    border:1px dashed var(--line-strong);border-radius:var(--radius);background:var(--panel)
+  }
+  .empty svg{width:40px;height:40px;color:var(--faint);margin-bottom:12px}
+
+  /* ---- Brand kit / stepper ---- */
+  .steps{display:flex;gap:8px;margin-bottom:26px;flex-wrap:wrap}
+  .step{
+    display:flex;align-items:center;gap:9px;cursor:pointer;
+    border:1px solid var(--line);background:var(--panel);
+    border-radius:999px;padding:7px 14px 7px 8px;font-size:13px;color:var(--muted);
+  }
+  .step.is-active{border-color:var(--accent);color:var(--ink)}
+  .step.is-done{color:var(--ink)}
+  .step__n{
+    width:22px;height:22px;border-radius:50%;flex:none;display:grid;place-items:center;
+    font-size:12px;font-weight:600;background:var(--bg);color:var(--muted);border:1px solid var(--line);
+  }
+  .step.is-active .step__n{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  .step.is-done .step__n{background:var(--accent-wash);color:var(--accent);border-color:transparent}
+
+  .pane{display:none}
+  .pane.is-active{display:block}
+  .pane h2{font-size:18px;letter-spacing:-.01em;margin:0 0 4px}
+  .pane > p.sub{margin:0 0 20px;color:var(--muted);font-size:14px;max-width:60ch}
+
+  .row{display:flex;gap:24px;flex-wrap:wrap}
+  .col{flex:1;min-width:240px}
+  .lbl{display:block;font-size:13px;font-weight:550;margin:0 0 7px}
+  .hint{font-size:12.5px;color:var(--muted);margin:6px 0 0}
+
+  .drop{
+    border:1.5px dashed var(--line-strong);border-radius:var(--radius);
+    background:var(--bg);padding:26px;text-align:center;cursor:pointer;color:var(--muted);
+    transition:border-color .12s,background .12s;
+  }
+  .drop:hover,.drop.is-over{border-color:var(--accent);background:var(--accent-wash);color:var(--accent)}
+  .drop svg{width:26px;height:26px;margin-bottom:8px;color:var(--faint)}
+  .drop.is-over svg,.drop:hover svg{color:var(--accent)}
+
+  .thumbs{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .thumb{
+    position:relative;width:84px;height:84px;border-radius:10px;overflow:hidden;
+    border:1px solid var(--line);background:var(--bg);
+  }
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .thumb__x{
+    position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;
+    border:0;background:rgba(22,24,29,.66);color:#fff;cursor:pointer;font-size:12px;line-height:1;
+    display:grid;place-items:center;
+  }
+
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+  .chip{
+    border:1px solid var(--line);background:var(--panel);border-radius:999px;
+    padding:7px 13px;font-size:13px;color:var(--muted);cursor:pointer;user-select:none;
+  }
+  .chip:hover{border-color:var(--line-strong)}
+  .chip.is-on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+
+  .swatches{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:2px}
+  .sw{position:relative;width:38px;height:38px;border-radius:9px;border:1px solid var(--line-strong);cursor:pointer}
+  .sw__x{
+    position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;
+    border:1px solid var(--line);background:var(--panel);color:var(--muted);cursor:pointer;
+    font-size:11px;line-height:1;display:grid;place-items:center;
+  }
+  .sw-add{
+    width:38px;height:38px;border-radius:9px;border:1.5px dashed var(--line-strong);
+    background:transparent;color:var(--faint);cursor:pointer;font-size:18px;
+  }
+  .sw-add:hover{border-color:var(--accent);color:var(--accent)}
+
+  textarea.input,input.input-text{
+    width:100%;border:1px solid var(--line);border-radius:9px;background:var(--bg);
+    padding:10px 12px;font-size:14px;font-family:var(--font);color:var(--ink);resize:vertical;
+  }
+  textarea.input:focus,input.input-text:focus,select.input:focus,.btn:focus-visible,.nav__btn:focus-visible,.chip:focus-visible{
+    outline:2px solid var(--accent);outline-offset:2px;
+  }
+
+  .compiled{
+    font-family:var(--mono);font-size:12.5px;line-height:1.6;color:var(--muted);
+    background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:14px;white-space:pre-wrap;
+  }
+  .pane__foot{display:flex;gap:10px;align-items:center;margin-top:24px;flex-wrap:wrap}
+  .pane__foot .spacer{flex:1}
+
+  .test-preview{
+    width:180px;height:180px;border:1px solid var(--line);border-radius:var(--radius);
+    background:radial-gradient(circle at 1px 1px,var(--grid) 1px,transparent 0) 0 0/18px 18px,var(--panel);
+    overflow:hidden;flex:none;
+  }
+  .test-preview iframe{width:100%;height:100%;border:0}
+
+  .toast{
+    position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;
+    opacity:0;pointer-events:none;transition:.25s;z-index:50;
+  }
+  .toast.is-on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  footer{max-width:1100px;margin:0 auto;padding:0 24px 40px;color:var(--faint);font-size:12.5px}
+
+  @media (max-width:620px){
+    .head h1{font-size:25px}
+    .nav__btn{padding:7px 9px}
+    .btn--go{margin-left:0;width:100%}
+    .composer__bar{gap:10px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand__mark" id="brandMark">
+      <!-- default mark: a vector node triangle -->
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 3l8.5 16.5a1 1 0 0 1-.9 1.5H4.4a1 1 0 0 1-.9-1.5L12 3z" fill="currentColor"/></svg>
+    </span>
+    <img class="brand__logo" id="brandLogo" alt="" style="display:none" />
+    <span class="brand__name" id="brandName">Vector Studio</span>
+  </div>
+  <nav class="nav">
+    <button class="nav__btn is-active" data-view="create">Create</button>
+    <button class="nav__btn" data-view="brand">Brand kit</button>
+  </nav>
+  <div class="topbar__right">
+    <span class="badge" id="modelBadge">arrow-1.1</span>
+    <span class="badge"><span class="dot" id="statusDot"></span><span id="statusText">Checking…</span></span>
+  </div>
+</header>
+
+<main>
+  <!-- ============================ CREATE ============================ -->
+  <section class="view is-active" id="view-create">
+    <div class="head">
+      <div class="eyebrow">Create</div>
+      <h1 id="createTitle">Describe the graphic you need</h1>
+      <p id="createTagline">Brand-true vector graphics, on demand</p>
+    </div>
+
+    <div class="panel composer">
+      <textarea id="prompt" placeholder="e.g. A pair of hiking boots with a small mountain badge, suitable for an outdoor brand"></textarea>
+      <div class="composer__bar">
+        <span class="field-label">Images</span>
+        <div class="seg" id="countSeg">
+          <button data-n="1" class="is-active">1</button>
+          <button data-n="2">2</button>
+          <button data-n="3">3</button>
+          <button data-n="4">4</button>
+          <button data-n="5">5</button>
+        </div>
+        <select class="input" id="modelSelect" title="Model">
+          <option value="arrow-1.1">Arrow 1.1 — balanced</option>
+          <option value="arrow-1.1-max">Arrow 1.1 Max — high detail</option>
+          <option value="arrow-1.0">Arrow 1.0</option>
+        </select>
+        <button class="btn btn--primary btn--go" id="generateBtn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Generate
+        </button>
+      </div>
+    </div>
+
+    <div class="kit-chip" id="kitChip"></div>
+
+    <div class="results" id="results"></div>
+  </section>
+
+  <!-- ============================ BRAND KIT ============================ -->
+  <section class="view" id="view-brand">
+    <div class="head">
+      <div class="eyebrow">Brand kit</div>
+      <h1>Teach the studio your style</h1>
+      <p>Add a few samples and a handful of choices once. Every image you create afterwards is steered to match — so prompts stay short and results stay on-brand.</p>
+    </div>
+
+    <div class="steps" id="steps">
+      <div class="step is-active" data-step="0"><span class="step__n">1</span> Samples</div>
+      <div class="step" data-step="1"><span class="step__n">2</span> Style</div>
+      <div class="step" data-step="2"><span class="step__n">3</span> Teach &amp; save</div>
+    </div>
+
+    <!-- Step 1: samples -->
+    <div class="pane is-active panel panel--pad" data-pane="0">
+      <h2>Show us a few examples</h2>
+      <p class="sub">Up to four images of artwork that already looks like the brand — icons, illustrations, past graphics. These guide the look more than any words can.</p>
+      <div class="drop" id="dropRefs">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0L8 8m4-4l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <div>Drop images here, or click to choose</div>
+        <div class="hint">PNG, JPG, WEBP or SVG · up to 4</div>
+      </div>
+      <input type="file" id="refInput" accept="image/*" multiple hidden />
+      <div class="thumbs" id="refThumbs"></div>
+
+      <div class="pane__foot">
+        <span class="hint">Optional, but strongly recommended.</span>
+        <span class="spacer"></span>
+        <button class="btn btn--primary" data-next="1">Next: style</button>
+      </div>
+    </div>
+
+    <!-- Step 2: style -->
+    <div class="pane panel panel--pad" data-pane="1">
+      <h2>Lock in the look</h2>
+      <p class="sub">A few quick choices. You can leave anything blank — samples already carry a lot of the signal.</p>
+
+      <div class="row">
+        <div class="col">
+          <label class="lbl">Brand name</label>
+          <input class="input-text" id="bName" placeholder="e.g. Northbound Outdoors" />
+        </div>
+      </div>
+
+      <div style="margin-top:18px">
+        <label class="lbl">Colour palette</label>
+        <div class="swatches" id="swatches"></div>
+        <p class="hint">Add brand colours, or pull them straight from a sample you uploaded.</p>
+        <button class="btn btn--ghost" id="pullColors" style="margin-top:6px;padding:6px 10px">Pull colours from a sample</button>
+      </div>
+
+      <div style="margin-top:20px">
+        <label class="lbl">Style</label>
+        <div class="chips" id="styleFamily" data-single="1">
+          <span class="chip" data-val="flat">Flat</span>
+          <span class="chip" data-val="line art">Line art</span>
+          <span class="chip" data-val="geometric">Geometric</span>
+          <span class="chip" data-val="gradient">Gradient</span>
+          <span class="chip" data-val="hand-drawn">Hand-drawn</span>
+          <span class="chip" data-val="isometric">Isometric</span>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:20px">
+        <div class="col">
+          <label class="lbl">Shapes</label>
+          <div class="chips" id="fill" data-single="1">
+            <span class="chip" data-val="solid filled shapes">Solid fills</span>
+            <span class="chip" data-val="outlined strokes only">Outlines</span>
+            <span class="chip" data-val="a mix of fills and outlines">Mixed</span>
+          </div>
+        </div>
+        <div class="col">
+          <label class="lbl">Corners</label>
+          <div class="chips" id="corners" data-single="1">
+            <span class="chip" data-val="sharp corners">Sharp</span>
+            <span class="chip" data-val="rounded corners">Rounded</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:20px">
+        <div class="col">
+          <label class="lbl">Stroke weight</label>
+          <div class="chips" id="stroke" data-single="1">
+            <span class="chip" data-val="">None</span>
+            <span class="chip" data-val="thin, even strokes">Thin</span>
+            <span class="chip" data-val="medium-weight strokes">Medium</span>
+            <span class="chip" data-val="bold, heavy strokes">Bold</span>
+          </div>
+        </div>
+        <div class="col">
+          <label class="lbl">Detail</label>
+          <div class="chips" id="detail" data-single="1">
+            <span class="chip" data-val="minimal, essential detail only">Minimal</span>
+            <span class="chip" data-val="balanced detail">Balanced</span>
+            <span class="chip" data-val="rich, intricate detail">Detailed</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px">
+        <label class="lbl">Mood</label>
+        <div class="chips" id="mood">
+          <span class="chip" data-val="friendly">Friendly</span>
+          <span class="chip" data-val="premium">Premium</span>
+          <span class="chip" data-val="playful">Playful</span>
+          <span class="chip" data-val="technical">Technical</span>
+          <span class="chip" data-val="organic">Organic</span>
+          <span class="chip" data-val="bold">Bold</span>
+          <span class="chip" data-val="calm">Calm</span>
+          <span class="chip" data-val="retro">Retro</span>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:20px">
+        <div class="col">
+          <label class="lbl">Avoid</label>
+          <input class="input-text" id="bAvoid" placeholder="e.g. drop shadows, photorealism, gradients" />
+        </div>
+        <div class="col">
+          <label class="lbl">Anything else</label>
+          <input class="input-text" id="bNotes" placeholder="e.g. always include a thin baseline" />
+        </div>
+      </div>
+
+      <div class="pane__foot">
+        <button class="btn" data-next="0">Back</button>
+        <span class="spacer"></span>
+        <button class="btn btn--primary" data-next="2">Next: teach &amp; save</button>
+      </div>
+    </div>
+
+    <!-- Step 3: teach & save -->
+    <div class="pane panel panel--pad" data-pane="2">
+      <h2>Run a test, then save</h2>
+      <p class="sub">This is the exact guidance attached to every future prompt. Generate a test mark to see the style in action before you save.</p>
+
+      <label class="lbl">Compiled style guidance <span class="hint" style="font-weight:400">— editable</span>
+        <button class="btn btn--ghost" id="resetCompiled" style="float:right;margin-top:-4px;padding:4px 9px;font-size:12px">Reset to choices</button>
+      </label>
+      <div class="compiled" id="compiled" contenteditable="true" spellcheck="false"></div>
+
+      <div class="row" style="margin-top:22px;align-items:flex-start">
+        <div class="test-preview" id="testPreview">
+          <div class="empty" style="border:0;padding:0;height:100%;display:grid;place-items:center;background:transparent">
+            <span class="hint" style="padding:0 16px;text-align:center">Test mark appears here</span>
+          </div>
+        </div>
+        <div class="col">
+          <button class="btn" id="testBtn">Generate a test mark</button>
+          <p class="hint" id="testHint">Uses a neutral sample prompt and one image credit.</p>
+        </div>
+      </div>
+
+      <div class="pane__foot">
+        <button class="btn" data-next="1">Back</button>
+        <span class="spacer"></span>
+        <button class="btn btn--ghost" id="exportKit">Export</button>
+        <button class="btn btn--ghost" id="importKit">Import</button>
+        <input type="file" id="importInput" accept="application/json" hidden />
+        <button class="btn btn--primary" id="saveKit">Save brand kit</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer id="footer"></footer>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ====================================================================
+   Vector Studio — frontend logic (vanilla, no dependencies)
+   ==================================================================== */
+(function(){
+  "use strict";
+
+  const T = window.THEME || {};
+  const $ = (s, r) => (r || document).querySelector(s);
+  const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+
+  /* ---------- Apply theme ---------- */
+  function applyTheme(){
+    const root = document.documentElement.style;
+    if (T.accent)    root.setProperty("--accent", T.accent);
+    if (T.accentInk) root.setProperty("--accent-ink", T.accentInk);
+    if (T.accent)    root.setProperty("--accent-wash", hexToWash(T.accent));
+    if (T.fontFamily) root.setProperty("--font", T.fontFamily);
+    if (T.fontUrl){
+      const l = document.createElement("link");
+      l.rel = "stylesheet"; l.href = T.fontUrl;
+      document.head.appendChild(l);
+    }
+    document.title = T.brandName || "Vector Studio";
+    $("#brandName").textContent = T.brandName || "Vector Studio";
+    $("#createTitle").textContent = "Describe the graphic you need";
+    $("#createTagline").textContent = T.tagline || "";
+    $("#footer").textContent = (T.brandName || "Vector Studio") + " · vector graphics powered by Quiver";
+    if (T.logoUrl){
+      const img = $("#brandLogo");
+      img.src = T.logoUrl; img.alt = T.brandName || "";
+      img.style.display = "block";
+      $("#brandMark").style.display = "none";
+    }
+  }
+  function hexToWash(hex){
+    const c = hex.replace("#","");
+    const v = c.length===3 ? c.split("").map(x=>x+x).join("") : c;
+    const r = parseInt(v.slice(0,2),16), g = parseInt(v.slice(2,4),16), b = parseInt(v.slice(4,6),16);
+    if ([r,g,b].some(Number.isNaN)) return "rgba(58,77,224,.08)";
+    return `rgba(${r},${g},${b},.09)`;
+  }
+
+  /* ---------- Tiny state ---------- */
+  const KIT_KEY = "vs_brandkit";
+  let kit = loadKit();
+  let count = 1;
+
+  function blankKit(){
+    return { name:"", palette:[], styleFamily:"", fill:"", corners:"",
+             stroke:"", detail:"", mood:[], avoid:"", notes:"", refs:[] };
+  }
+  function loadKit(){
+    try { const k = JSON.parse(localStorage.getItem(KIT_KEY)); return k && typeof k==="object" ? Object.assign(blankKit(), k) : null; }
+    catch(e){ return null; }
+  }
+  function saveKitToStorage(){
+    try { localStorage.setItem(KIT_KEY, JSON.stringify(kit)); return true; }
+    catch(e){ toast("Couldn't save — browser storage is full. Remove a sample image and retry."); return false; }
+  }
+
+  /* ---------- Toast ---------- */
+  let toastTimer;
+  function toast(msg){
+    const el = $("#toast"); el.textContent = msg; el.classList.add("is-on");
+    clearTimeout(toastTimer); toastTimer = setTimeout(()=>el.classList.remove("is-on"), 2600);
+  }
+
+  /* ---------- View switching ---------- */
+  $$(".nav__btn").forEach(b => b.addEventListener("click", () => switchView(b.dataset.view)));
+  function switchView(name){
+    $$(".nav__btn").forEach(b => b.classList.toggle("is-active", b.dataset.view===name));
+    $$(".view").forEach(v => v.classList.toggle("is-active", v.id==="view-"+name));
+    if (name==="brand"){ kitToForm(); gotoStep(0); }
+    if (name==="create"){ renderKitChip(); }
+    window.scrollTo({top:0, behavior:"smooth"});
+  }
+
+  /* ---------- Backend status ---------- */
+  async function checkStatus(){
+    try{
+      const r = await fetch("/api/config");
+      const c = await r.json();
+      const dot = $("#statusDot"), txt = $("#statusText");
+      if (c.ready){ dot.className="dot is-ok"; txt.textContent="Connected"; }
+      else { dot.className="dot is-bad"; txt.textContent="No API key"; }
+      if (c.defaultModel){ $("#modelBadge").textContent = c.defaultModel; $("#modelSelect").value = c.defaultModel; }
+    }catch(e){
+      $("#statusDot").className="dot is-bad";
+      $("#statusText").textContent="Backend offline";
+    }
+  }
+
+  /* ================================================================
+     CREATE
+     ================================================================ */
+  $("#countSeg").addEventListener("click", e => {
+    const b = e.target.closest("button"); if(!b) return;
+    count = parseInt(b.dataset.n,10);
+    $$("#countSeg button").forEach(x => x.classList.toggle("is-active", x===b));
+  });
+  $("#modelSelect").addEventListener("change", e => $("#modelBadge").textContent = e.target.value);
+
+  function renderKitChip(){
+    const chip = $("#kitChip");
+    if (kit && (kit.name || kit.refs.length || kit.styleFamily || kit.palette.length)){
+      chip.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="var(--ok)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Brand kit active${kit.name ? ": <b>"+escapeHtml(kit.name)+"</b>" : ""} · <a data-go-brand>edit</a>`;
+    } else {
+      chip.innerHTML = `No brand kit yet — <a data-go-brand>set one up</a> so results match your style.`;
+    }
+    const link = chip.querySelector("[data-go-brand]");
+    if (link) link.addEventListener("click", () => switchView("brand"));
+  }
+
+  $("#generateBtn").addEventListener("click", generate);
+  $("#prompt").addEventListener("keydown", e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") generate();
+  });
+
+  async function generate(){
+    const prompt = $("#prompt").value.trim();
+    if (!prompt){ toast("Add a description first."); $("#prompt").focus(); return; }
+
+    const btn = $("#generateBtn");
+    btn.disabled = true;
+    renderSkeletons(count);
+
+    const body = {
+      prompt,
+      n: count,
+      model: $("#modelSelect").value,
+      instructions: kit ? activeInstructions(kit) : undefined,
+      references: kit && kit.refs.length ? kit.refs.map(r => ({ base64: stripData(r.data) })) : undefined,
+    };
+
+    try{
+      const r = await fetch("/api/generate", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await r.json();
+      if (!r.ok){ renderError(data.error || "Something went wrong."); return; }
+      renderResults(data.images || [], prompt, data.credits);
+    }catch(e){
+      renderError("Couldn't reach the studio. Check your connection and try again.");
+    }finally{
+      btn.disabled = false;
+    }
+  }
+
+  function renderSkeletons(n){
+    const wrap = $("#results");
+    wrap.innerHTML = `<div class="results__head"><span class="eyebrow">Working…</span></div>
+      <div class="grid">${Array.from({length:n}).map(()=>`<div class="tile skeleton"><div class="tile__art"></div></div>`).join("")}</div>`;
+  }
+  function renderError(msg){
+    $("#results").innerHTML = `<div class="notice notice--error">${escapeHtml(msg)}</div>`;
+  }
+  function renderResults(svgs, prompt, credits){
+    const wrap = $("#results");
+    if (!svgs.length){ renderError("No images came back. Try rephrasing the prompt."); return; }
+    const slug = (prompt.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,40)) || "image";
+    wrap.innerHTML = `<div class="results__head">
+        <span class="eyebrow">Results</span>
+        ${typeof credits==="number" ? `<span class="hint">${credits} credit${credits===1?"":"s"} used</span>` : ""}
+      </div><div class="grid" id="grid"></div>`;
+    const grid = $("#grid", wrap);
+    svgs.forEach((svg, i) => grid.appendChild(buildTile(svg, slug, i)));
+  }
+
+  function buildTile(svg, slug, i){
+    const tile = document.createElement("div");
+    tile.className = "tile";
+    tile.style.animationDelay = (i*60)+"ms";
+
+    const art = document.createElement("div");
+    art.className = "tile__art";
+    const frame = document.createElement("iframe");
+    frame.setAttribute("sandbox","");                 // neutralise any script in returned markup
+    frame.setAttribute("title","Generated SVG "+(i+1));
+    frame.srcdoc = `<style>html,body{margin:0;height:100%}body{display:grid;place-items:center}svg{max-width:84%;max-height:84%}</style>${svg}`;
+    art.appendChild(frame);
+
+    const bar = document.createElement("div");
+    bar.className = "tile__bar";
+    const dl = mkBtn("SVG", () => downloadBlob(svg, `${slug}-${i+1}.svg`, "image/svg+xml"));
+    const png = mkBtn("PNG", () => svgToPng(svg, `${slug}-${i+1}.png`));
+    const cp = mkBtn("Copy", () => { navigator.clipboard.writeText(svg).then(()=>toast("SVG copied")); });
+    bar.append(dl, png, cp);
+
+    tile.append(art, bar);
+    return tile;
+  }
+  function mkBtn(label, fn){
+    const b = document.createElement("button");
+    b.className = "btn"; b.textContent = label; b.addEventListener("click", fn);
+    return b;
+  }
+
+  /* ---------- Downloads ---------- */
+  function downloadBlob(text, name, type){
+    const url = URL.createObjectURL(new Blob([text], {type}));
+    const a = document.createElement("a"); a.href = url; a.download = name; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  }
+  function svgToPng(svg, name){
+    const img = new Image();
+    const url = URL.createObjectURL(new Blob([svg], {type:"image/svg+xml"}));
+    img.onload = () => {
+      const size = 1024;
+      const c = document.createElement("canvas"); c.width = size; c.height = size;
+      const ctx = c.getContext("2d");
+      const ar = (img.width||1)/(img.height||1);
+      let w=size, h=size; if(ar>1) h=size/ar; else w=size*ar;
+      ctx.drawImage(img, (size-w)/2, (size-h)/2, w, h);
+      c.toBlob(b => { const u=URL.createObjectURL(b); const a=document.createElement("a"); a.href=u; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(u),1000); });
+      URL.revokeObjectURL(url);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); toast("Couldn't convert this one to PNG. Use the SVG."); };
+    img.src = url;
+  }
+
+  /* ================================================================
+     BRAND KIT — stepper
+     ================================================================ */
+  $$("#steps .step").forEach(s => s.addEventListener("click", () => gotoStep(+s.dataset.step)));
+  $$("[data-next]").forEach(b => b.addEventListener("click", () => { formToKit(); gotoStep(+b.dataset.next); }));
+
+  function gotoStep(i){
+    $$("#steps .step").forEach(s => {
+      const n = +s.dataset.step;
+      s.classList.toggle("is-active", n===i);
+      s.classList.toggle("is-done", n<i);
+    });
+    $$(".pane").forEach(p => p.classList.toggle("is-active", +p.dataset.pane===i));
+    if (i===2){ formToKit(); $("#compiled").textContent = activeInstructions(kit || blankKit()) || ""; }
+  }
+
+  /* ---------- Samples (references) ---------- */
+  const dropRefs = $("#dropRefs"), refInput = $("#refInput");
+  dropRefs.addEventListener("click", () => refInput.click());
+  refInput.addEventListener("change", e => addRefs(e.target.files));
+  ;["dragover","dragenter"].forEach(ev => dropRefs.addEventListener(ev, e => { e.preventDefault(); dropRefs.classList.add("is-over"); }));
+  ;["dragleave","drop"].forEach(ev => dropRefs.addEventListener(ev, e => { e.preventDefault(); dropRefs.classList.remove("is-over"); }));
+  dropRefs.addEventListener("drop", e => addRefs(e.dataTransfer.files));
+
+  async function addRefs(fileList){
+    if (!kit) kit = blankKit();
+    const files = Array.from(fileList || []).filter(f => f.type.startsWith("image/"));
+    for (const f of files){
+      if (kit.refs.length >= 4){ toast("Four samples is the max for this model."); break; }
+      try{
+        const data = await downscaleToDataURL(f, 768);
+        kit.refs.push({ name: f.name, data });
+      }catch(e){ /* skip unreadable file */ }
+    }
+    renderThumbs();
+  }
+  function renderThumbs(){
+    const wrap = $("#refThumbs");
+    wrap.innerHTML = (kit?.refs || []).map((r, i) =>
+      `<div class="thumb"><img src="${r.data}" alt=""><button class="thumb__x" data-rm="${i}" title="Remove">×</button></div>`).join("");
+    $$("[data-rm]", wrap).forEach(b => b.addEventListener("click", () => { kit.refs.splice(+b.dataset.rm,1); renderThumbs(); }));
+  }
+
+  // Downscale + re-encode so localStorage stays small. SVGs pass through as-is.
+  function downscaleToDataURL(file, max){
+    return new Promise((resolve, reject) => {
+      if (file.type === "image/svg+xml"){
+        const fr = new FileReader();
+        fr.onload = () => resolve(fr.result);
+        fr.onerror = reject; fr.readAsDataURL(file); return;
+      }
+      const fr = new FileReader();
+      fr.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          let {width:w, height:h} = img;
+          if (w>max || h>max){ const s = max/Math.max(w,h); w=Math.round(w*s); h=Math.round(h*s); }
+          const c = document.createElement("canvas"); c.width=w; c.height=h;
+          c.getContext("2d").drawImage(img,0,0,w,h);
+          resolve(c.toDataURL("image/png"));
+        };
+        img.onerror = reject; img.src = fr.result;
+      };
+      fr.onerror = reject; fr.readAsDataURL(file);
+    });
+  }
+
+  /* ---------- Palette ---------- */
+  function renderSwatches(){
+    const wrap = $("#swatches");
+    const pal = kit?.palette || [];
+    wrap.innerHTML = pal.map((hex,i) =>
+      `<span class="sw" style="background:${escapeAttr(hex)}"><input type="color" value="${escapeAttr(hex)}" data-ci="${i}" style="opacity:0;width:100%;height:100%;cursor:pointer"><button class="sw__x" data-cx="${i}">×</button></span>`).join("")
+      + `<button class="sw-add" id="swAdd" title="Add colour">+</button>`;
+    $$("[data-ci]", wrap).forEach(inp => inp.addEventListener("input", () => { kit.palette[+inp.dataset.ci] = inp.value; renderSwatches(); }));
+    $$("[data-cx]", wrap).forEach(b => b.addEventListener("click", () => { kit.palette.splice(+b.dataset.cx,1); renderSwatches(); }));
+    $("#swAdd", wrap).addEventListener("click", () => { if(!kit) kit=blankKit(); kit.palette.push("#3A4DE0"); renderSwatches(); });
+  }
+  $("#pullColors").addEventListener("click", () => {
+    if (!kit || !kit.refs.length){ toast("Upload a sample first, then pull colours from it."); return; }
+    extractColors(kit.refs[0].data, 5).then(cols => {
+      if(!kit.palette) kit.palette=[];
+      cols.forEach(c => { if(!kit.palette.includes(c)) kit.palette.push(c); });
+      renderSwatches(); toast("Added colours from your sample.");
+    }).catch(()=>toast("Couldn't read colours from that image."));
+  });
+  // Simple dominant-colour extraction: shrink, bucket, count, drop near-white/black.
+  function extractColors(dataUrl, n){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const s=40, c=document.createElement("canvas"); c.width=s; c.height=s;
+        const ctx=c.getContext("2d"); ctx.drawImage(img,0,0,s,s);
+        const d=ctx.getImageData(0,0,s,s).data, buckets={};
+        for(let i=0;i<d.length;i+=4){
+          if(d[i+3]<128) continue;
+          const r=d[i],g=d[i+1],b=d[i+2];
+          const mx=Math.max(r,g,b),mn=Math.min(r,g,b);
+          if(mx>240&&mn>240) continue; if(mx<18) continue;     // skip white & black
+          const key=[r,g,b].map(v=>Math.round(v/24)*24).join(",");
+          buckets[key]=(buckets[key]||0)+1;
+        }
+        const top=Object.entries(buckets).sort((a,b)=>b[1]-a[1]).slice(0,n)
+          .map(([k])=>"#"+k.split(",").map(v=>(+v).toString(16).padStart(2,"0")).join(""));
+        resolve(top);
+      };
+      img.onerror = reject; img.src = dataUrl;
+    });
+  }
+
+  /* ---------- Chip groups ---------- */
+  function wireChips(id, single){
+    $("#"+id).addEventListener("click", e => {
+      const chip = e.target.closest(".chip"); if(!chip) return;
+      if (single){
+        const on = chip.classList.contains("is-on");
+        $$("#"+id+" .chip").forEach(c => c.classList.remove("is-on"));
+        if (!on) chip.classList.add("is-on");
+      } else {
+        chip.classList.toggle("is-on");
+      }
+    });
+  }
+  ["styleFamily","fill","corners","stroke","detail","mood"].forEach(id => wireChips(id, $("#"+id).dataset.single==="1"));
+
+  function selectedSingle(id){ const c = $("#"+id+" .chip.is-on"); return c ? c.dataset.val : ""; }
+  function selectedMulti(id){ return $$("#"+id+" .chip.is-on").map(c => c.dataset.val); }
+  function setSingle(id, val){ $$("#"+id+" .chip").forEach(c => c.classList.toggle("is-on", c.dataset.val===val)); }
+  function setMulti(id, vals){ const set=new Set(vals||[]); $$("#"+id+" .chip").forEach(c => c.classList.toggle("is-on", set.has(c.dataset.val))); }
+
+  /* ---------- Form <-> kit ---------- */
+  function formToKit(){
+    if(!kit) kit = blankKit();
+    kit.name = $("#bName").value.trim();
+    kit.styleFamily = selectedSingle("styleFamily");
+    kit.fill = selectedSingle("fill");
+    kit.corners = selectedSingle("corners");
+    kit.stroke = selectedSingle("stroke");
+    kit.detail = selectedSingle("detail");
+    kit.mood = selectedMulti("mood");
+    kit.avoid = $("#bAvoid").value.trim();
+    kit.notes = $("#bNotes").value.trim();
+    // palette + refs are mutated live
+  }
+  function kitToForm(){
+    const k = kit || blankKit();
+    $("#bName").value = k.name || "";
+    setSingle("styleFamily", k.styleFamily);
+    setSingle("fill", k.fill);
+    setSingle("corners", k.corners);
+    setSingle("stroke", k.stroke);
+    setSingle("detail", k.detail);
+    setMulti("mood", k.mood);
+    $("#bAvoid").value = k.avoid || "";
+    $("#bNotes").value = k.notes || "";
+    renderThumbs(); renderSwatches();
+  }
+
+  /* ---------- Instruction compiler ---------- */
+  function compileInstructions(k){
+    if (!k) return undefined;
+    const p = [];
+    p.push(`Brand visual style${k.name ? " for "+k.name : ""}.`);
+    if (k.styleFamily) p.push(`Render as ${k.styleFamily} vector artwork.`);
+    if (k.palette && k.palette.length) p.push(`Use this colour palette and close tints only: ${k.palette.join(", ")}.`);
+    const shape = [k.fill, k.corners, k.stroke].filter(Boolean).join(", with ");
+    if (shape) p.push(`Use ${shape}.`);
+    if (k.detail) p.push(`Keep ${k.detail}.`);
+    if (k.mood && k.mood.length) p.push(`Overall mood: ${k.mood.join(", ")}.`);
+    p.push("Centre the composition on a square viewBox, keep the background transparent unless a brand colour fills it, and return clean, production-ready SVG with grouped paths and no embedded raster images.");
+    if (k.avoid) p.push(`Avoid: ${k.avoid}.`);
+    if (k.notes) p.push(k.notes);
+    return p.join(" ");
+  }
+  // What actually gets sent: a hand-edited override if present, else the compiled version.
+  function activeInstructions(k){
+    if (!k) return undefined;
+    const custom = (k.customInstructions || "").trim();
+    return custom || compileInstructions(k);
+  }
+
+  /* ---------- Step 3 actions ---------- */
+  $("#testBtn").addEventListener("click", async () => {
+    formToKit();
+    const instructions = ($("#compiled").textContent || activeInstructions(kit) || "").trim();
+    const btn = $("#testBtn"); btn.disabled = true; btn.textContent = "Generating…";
+    $("#testHint").textContent = "Working…";
+    try{
+      const r = await fetch("/api/generate", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+          prompt: "a simple emblem of a mountain inside a circle",
+          n:1, model:$("#modelSelect").value, instructions,
+          references: kit.refs.length ? kit.refs.map(x=>({base64:stripData(x.data)})) : undefined,
+        }),
+      });
+      const data = await r.json();
+      if(!r.ok){ toast(data.error || "Test failed."); $("#testHint").textContent = data.error || "Test failed."; return; }
+      const svg = (data.images||[])[0];
+      if(!svg){ $("#testHint").textContent = "No image came back."; return; }
+      const f = document.createElement("iframe"); f.setAttribute("sandbox","");
+      f.srcdoc = `<style>html,body{margin:0;height:100%}body{display:grid;place-items:center}svg{max-width:84%;max-height:84%}</style>${svg}`;
+      const prev = $("#testPreview"); prev.innerHTML = ""; prev.appendChild(f);
+      $("#testHint").textContent = "If that feels on-brand, save the kit.";
+    }catch(e){ $("#testHint").textContent = "Couldn't reach the studio."; }
+    finally{ btn.disabled=false; btn.textContent="Generate a test mark"; }
+  });
+
+  $("#saveKit").addEventListener("click", () => {
+    formToKit();
+    const edited = ($("#compiled").textContent || "").trim();
+    // Store the box as an override only if it diverges from the compiled version.
+    kit.customInstructions = (edited && edited !== compileInstructions(kit)) ? edited : "";
+    if (saveKitToStorage()){ toast("Brand kit saved."); switchView("create"); }
+  });
+
+  // Discard hand edits and rebuild guidance from the structured choices.
+  $("#resetCompiled").addEventListener("click", () => {
+    formToKit();
+    kit.customInstructions = "";
+    $("#compiled").textContent = compileInstructions(kit) || "";
+    toast("Reset to your choices.");
+  });
+
+  $("#exportKit").addEventListener("click", () => {
+    formToKit();
+    downloadBlob(JSON.stringify(kit, null, 2), (kit.name||"brand-kit").toLowerCase().replace(/[^a-z0-9]+/g,"-")+".json", "application/json");
+  });
+  $("#importKit").addEventListener("click", () => $("#importInput").click());
+  $("#importInput").addEventListener("change", e => {
+    const f = e.target.files[0]; if(!f) return;
+    const fr = new FileReader();
+    fr.onload = () => { try{ kit = Object.assign(blankKit(), JSON.parse(fr.result)); kitToForm(); gotoStep(0); toast("Brand kit imported."); }catch(err){ toast("That file wasn't a valid brand kit."); } };
+    fr.readAsText(f);
+  });
+
+  /* ---------- Helpers ---------- */
+  function stripData(dataUrl){ const i = (dataUrl||"").indexOf(","); return i>=0 ? dataUrl.slice(i+1) : dataUrl; }
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
+  function escapeAttr(s){ return escapeHtml(s); }
+
+  /* ---------- Boot ---------- */
+  applyTheme();
+  renderKitChip();
+  renderSwatches();
+  checkStatus();
+})();
+</script>
+</body>
+</html>
