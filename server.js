@@ -60,7 +60,15 @@ async function initDb() {
         data jsonb NOT NULL,
         updated_at timestamptz NOT NULL DEFAULT now()
       )`);
-    console.log("[ok] Brand kit table ready.");
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS creations (
+        id bigserial PRIMARY KEY,
+        svg text NOT NULL,
+        prompt text NOT NULL DEFAULT '',
+        model text NOT NULL DEFAULT '',
+        created_at timestamptz NOT NULL DEFAULT now()
+      )`);
+    console.log("[ok] Brand kit + creations tables ready.");
     return true;
   } catch (err) {
     console.error("[error] Could not initialise Postgres:", err.message);
@@ -88,6 +96,39 @@ async function saveKit(data) {
      ON CONFLICT (id) DO UPDATE SET data = $2, updated_at = now()`,
     [KIT_ID, data]
   );
+}
+
+/* Save every generated SVG so it shows up in the shared gallery. */
+async function saveCreations(items) {
+  if (!pool || !items.length) return;
+  await dbReady;
+  const placeholders = items.map((_, i) => `($${i * 3 + 1}, $${i * 3 + 2}, $${i * 3 + 3})`);
+  const params = items.flatMap((it) => [it.svg, it.prompt || "", it.model || ""]);
+  await pool.query(`INSERT INTO creations (svg, prompt, model) VALUES ${placeholders.join(", ")}`, params);
+}
+
+/* Newest-first list, paginated by id cursor (`beforeId`). */
+async function listCreations(limit, beforeId) {
+  if (!pool) return [];
+  try {
+    await dbReady;
+    const lim = clampInt(limit, 30, 1, 60);
+    if (beforeId) {
+      const { rows } = await pool.query(
+        "SELECT id, svg, prompt, model, created_at FROM creations WHERE id < $2 ORDER BY id DESC LIMIT $1",
+        [lim, beforeId]
+      );
+      return rows;
+    }
+    const { rows } = await pool.query(
+      "SELECT id, svg, prompt, model, created_at FROM creations ORDER BY id DESC LIMIT $1",
+      [lim]
+    );
+    return rows;
+  } catch (err) {
+    console.error("[error] listCreations:", err.message);
+    return [];
+  }
 }
 
 /* ------------------------------------------------------------------ *
@@ -240,10 +281,29 @@ app.post("/api/generate", async (req, res) => {
     const r = await quiver("/svgs/generations", { method: "POST", body: payload });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) return res.status(r.status).json(normalizeError(data, r.status));
-    res.json({ id: data.id, credits: data.credits, images: (data.data || []).map((d) => d.svg).filter(Boolean) });
+
+    const images = (data.data || []).map((d) => d.svg).filter(Boolean);
+
+    // Real generations are saved to the shared gallery; test-mark previews are not.
+    if (!preview && images.length) {
+      try {
+        await saveCreations(images.map((svg) => ({ svg, prompt: payload.prompt, model: payload.model })));
+      } catch (err) {
+        console.error("[error] saveCreations:", err.message); // never block the response on this
+      }
+    }
+
+    res.json({ id: data.id, credits: data.credits, images });
   } catch {
     res.status(502).json({ error: "Could not reach the image service. Try again." });
   }
+});
+
+/* Public: the shared gallery. Newest first; paginate with ?before=<id>. */
+app.get("/api/creations", async (req, res) => {
+  const beforeId = req.query.before ? parseInt(req.query.before, 10) : null;
+  const rows = await listCreations(req.query.limit, beforeId);
+  res.json({ creations: rows });
 });
 
 /* ------------------------------------------------------------------ *

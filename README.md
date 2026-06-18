@@ -21,6 +21,11 @@ bearer token and forwards to Quiver.
 The kit is stored in Postgres and applied **server-side** on every generation, so end
 users only send a prompt. The Brand kit editor is open (no login).
 
+**Gallery.** Every generated SVG is saved to a `creations` table and shown on the public
+**Gallery** tab, newest first — a shared feed of everything made on that deploy. Test marks
+from the Brand kit editor are not saved. The gallery (and its prompts) are visible to anyone
+who opens the URL.
+
 ## Deploy on Railway (dashboard + GitHub website — no terminal)
 
 1. In **GitHub**, create a repo and upload these files (keep `index.html` inside a
