@@ -177,6 +177,10 @@
   .btn:disabled{opacity:.5;cursor:not-allowed}
   .btn--go{margin-left:auto}
 
+  .cost-hint{font-size:12px;color:var(--muted);white-space:nowrap}
+  .cost-hint b{color:var(--ink);font-weight:600}
+  .cost-hint .dim{color:var(--faint)}
+
   .kit-chip{
     display:inline-flex;align-items:center;gap:8px;margin-top:14px;
     font-size:13px;color:var(--muted);
@@ -383,6 +387,7 @@
           <option value="arrow-1.1-max">Arrow 1.1 Max — high detail</option>
           <option value="arrow-1.0">Arrow 1.0</option>
         </select>
+        <span class="cost-hint" id="costHint"></span>
         <button class="btn btn--primary btn--go" id="generateBtn">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           Generate
@@ -719,8 +724,30 @@
     const b = e.target.closest("button"); if(!b) return;
     count = parseInt(b.dataset.n,10);
     $$("#countSeg button").forEach(x => x.classList.toggle("is-active", x===b));
+    updateCostHint();
   });
-  $("#modelSelect").addEventListener("change", e => $("#modelBadge").textContent = e.target.value);
+  $("#modelSelect").addEventListener("change", e => { $("#modelBadge").textContent = e.target.value; updateCostHint(); });
+
+  /* ---------- Live cost line (from /api/models pricing_credits) ---------- */
+  const PER_CREDIT_USD = 0.01; // Quiver default; org may have a custom rate
+  let modelCredits = {};       // { "arrow-1.1": 20, ... }
+  async function loadModelCosts(){
+    try{
+      const d = await (await fetch("/api/models")).json();
+      (d.data || []).forEach(m => {
+        const c = m.pricing_credits && m.pricing_credits.svg_generate;
+        if (typeof c === "number") modelCredits[m.id] = c;
+      });
+    }catch(e){ /* leave hint empty if unavailable */ }
+    updateCostHint();
+  }
+  function updateCostHint(){
+    const el = $("#costHint"); if(!el) return;
+    const per = modelCredits[$("#modelSelect").value];
+    if (!per){ el.textContent = ""; return; }
+    const total = per * count;
+    el.innerHTML = `${per} credits/image · ${count} = <b>${total} credits</b> <span class="dim">(~$${(total*PER_CREDIT_USD).toFixed(2)})</span>`;
+  }
 
   async function renderKitChip(){
     const chip = $("#kitChip");
@@ -1103,6 +1130,7 @@
   renderKitChip();
   renderSwatches();
   checkStatus();
+  loadModelCosts();
 })();
 </script>
 </body>
