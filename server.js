@@ -15,6 +15,7 @@
 
 const express = require("express");
 const path = require("path");
+const fs = require("fs");
 
 const app = express();
 app.use(express.json({ limit: "25mb" })); // base64 reference images can be large
@@ -195,10 +196,27 @@ function normalizeError(data, status) {
   };
 }
 
-/* Serve the frontend. */
-app.use(express.static(path.join(__dirname, "public")));
+/* Serve the frontend. Works whether index.html sits in ./public or at the
+ * project root, and complains loudly if it's missing entirely. */
+const PUBLIC_DIR = path.join(__dirname, "public");
+const INDEX = fs.existsSync(path.join(PUBLIC_DIR, "index.html"))
+  ? path.join(PUBLIC_DIR, "index.html")
+  : path.join(__dirname, "index.html");
+
+if (!fs.existsSync(INDEX)) {
+  console.error(
+    "[error] index.html not found in ./public or the project root. " +
+      "The page will 404 until it's added. Expected: " + path.join(PUBLIC_DIR, "index.html")
+  );
+} else {
+  console.log("[ok] Serving frontend from " + INDEX);
+}
+
+app.use(express.static(PUBLIC_DIR)); // serves ./public assets when that folder exists
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  res.sendFile(INDEX, (err) => {
+    if (err) res.status(404).send("Frontend not found. index.html is missing from this deploy.");
+  });
 });
 
 app.listen(PORT, () => {
