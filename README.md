@@ -14,27 +14,37 @@ Browser ──▶  /api/generate (your server)  ──▶  api.quiver.ai
 The browser never sees the API key. It calls your own `/api/*` routes; the server attaches the
 bearer token and forwards to Quiver.
 
-**Brand styling** is captured once in the in-app **Brand kit** flow:
+**Brand styling** is captured once in the in-app **Brand kit** flow (admin-only):
 - up to 4 sample images → sent as Quiver `references`
 - palette + style choices → compiled into the Quiver `instructions` string
 
-Both ride along with every prompt automatically, so client prompts stay short and on-brand.
+The kit is stored in Postgres and applied **server-side** on every generation, so end
+users only send a prompt — they can't see or change the brand style. Editing the kit
+requires `ADMIN_TOKEN`.
 
 ## Run locally
 
 ```bash
 npm install
 export QUIVERAI_API_KEY="sk_live_..."   # never commit this
+export DATABASE_URL="postgresql://..."  # optional; enables saving the brand kit
+export ADMIN_TOKEN="a-long-random-string"
 npm start                               # http://localhost:3000
 ```
 
 ## Deploy to Railway
 
 1. Push this folder to a repo and create a Railway service from it.
-2. Add a service variable `QUIVERAI_API_KEY` = your Quiver key.
-3. Deploy. Railway runs `npm start` and serves on its assigned `PORT` automatically.
+2. **Add a Postgres database** to the project (New → Database → PostgreSQL). Railway
+   exposes its connection string as `DATABASE_URL`.
+3. On the app service, add variables:
+   - `QUIVERAI_API_KEY` = your Quiver key
+   - `DATABASE_URL` = reference the Postgres service's `DATABASE_URL`
+   - `ADMIN_TOKEN` = a long random string (your brand-kit password)
+4. Deploy. On boot the server creates the `brand_kits` table automatically.
+5. Settings → Networking → Generate Domain.
 
-Optional variables: `QUIVER_MODEL` (default `arrow-1.1`), `MAX_IMAGES` (default `5`).
+The table is created on first boot — no migration step needed.
 
 ## Reskin for a new client (the whole job)
 
@@ -60,17 +70,17 @@ to their own account.
   Surface this to clients if they're cost-sensitive.
 - **Rate limit:** 20 requests / 60s per Quiver org. The server keeps a soft cap (18/60s) and backs
   off on 429s. If you ever run many server instances behind one key, move that limiter to Redis.
-- **Brand kit storage:** saved in the browser's `localStorage`, with Export/Import for portability.
-  For a shared/multi-user client, promote this to a Postgres row or a baked `brand.json` the server
-  serves — the kit is already a plain JSON object, so it's a small change.
+- **Brand kit storage:** saved in Postgres (`brand_kits` table, one `default` row) and
+  applied server-side. Export/Import JSON is still available in the editor for backups or
+  moving a kit between deploys.
 - **Security:** SVGs returned by the API are rendered inside sandboxed iframes, so any stray markup
   can't touch the page. The key only ever lives in server env.
 
 ## Files
 
 ```
-server.js            Express proxy + static host + rate-limit backoff
-public/index.html    The whole app (UI, brand-kit flow, generate) + THEME block
+server.js            Express proxy + Postgres brand kit + static host
+public/index.html    The whole app (UI, admin brand-kit editor, generate) + THEME block
 package.json
 .env.example
 ```

@@ -403,6 +403,22 @@
       <p>Add a few samples and a handful of choices once. Every image you create afterwards is steered to match — so prompts stay short and results stay on-brand.</p>
     </div>
 
+    <!-- Admin gate -->
+    <div class="panel panel--pad" id="adminGate">
+      <h2>Admin access</h2>
+      <p class="sub">Editing the brand kit is restricted. Enter the admin token to continue.</p>
+      <div class="row" style="align-items:flex-end">
+        <div class="col" style="max-width:340px">
+          <label class="lbl">Admin token</label>
+          <input class="input-text" id="adminToken" type="password" placeholder="••••••••••" autocomplete="off" />
+        </div>
+        <button class="btn btn--primary" id="unlockBtn">Unlock</button>
+      </div>
+      <p class="hint" id="gateMsg" style="margin-top:12px"></p>
+    </div>
+
+    <!-- Editor (revealed after unlock) -->
+    <div id="editor" style="display:none">
     <div class="steps" id="steps">
       <div class="step is-active" data-step="0"><span class="step__n">1</span> Samples</div>
       <div class="step" data-step="1"><span class="step__n">2</span> Style</div>
@@ -560,6 +576,7 @@
         <button class="btn btn--primary" id="saveKit">Save brand kit</button>
       </div>
     </div>
+    </div><!-- /#editor -->
   </section>
 </main>
 
@@ -610,22 +627,17 @@
   }
 
   /* ---------- Tiny state ---------- */
-  const KIT_KEY = "vs_brandkit";
-  let kit = loadKit();
+  const TOKEN_KEY = "vs_admin_token";
+  let kit = null;          // working copy, loaded from the server on unlock
   let count = 1;
 
   function blankKit(){
     return { name:"", palette:[], styleFamily:"", fill:"", corners:"",
              stroke:"", detail:"", mood:[], avoid:"", notes:"", refs:[] };
   }
-  function loadKit(){
-    try { const k = JSON.parse(localStorage.getItem(KIT_KEY)); return k && typeof k==="object" ? Object.assign(blankKit(), k) : null; }
-    catch(e){ return null; }
-  }
-  function saveKitToStorage(){
-    try { localStorage.setItem(KIT_KEY, JSON.stringify(kit)); return true; }
-    catch(e){ toast("Couldn't save — browser storage is full. Remove a sample image and retry."); return false; }
-  }
+  function getToken(){ try { return sessionStorage.getItem(TOKEN_KEY) || ""; } catch(e){ return ""; } }
+  function setToken(t){ try { t ? sessionStorage.setItem(TOKEN_KEY, t) : sessionStorage.removeItem(TOKEN_KEY); } catch(e){} }
+  function adminHeaders(extra){ return Object.assign({ "x-admin-token": getToken() }, extra || {}); }
 
   /* ---------- Toast ---------- */
   let toastTimer;
@@ -639,9 +651,50 @@
   function switchView(name){
     $$(".nav__btn").forEach(b => b.classList.toggle("is-active", b.dataset.view===name));
     $$(".view").forEach(v => v.classList.toggle("is-active", v.id==="view-"+name));
-    if (name==="brand"){ kitToForm(); gotoStep(0); }
+    if (name==="brand"){ enterBrand(); }
     if (name==="create"){ renderKitChip(); }
     window.scrollTo({top:0, behavior:"smooth"});
+  }
+
+  /* ---------- Brand gate: unlock + load from server ---------- */
+  function showEditor(on){
+    $("#adminGate").style.display = on ? "none" : "block";
+    $("#editor").style.display = on ? "block" : "none";
+  }
+  async function enterBrand(){
+    // If we already hold a token, try to load straight into the editor.
+    if (getToken()){
+      const res = await loadKitFromServer();
+      if (res.ok){ showEditor(true); kitToForm(); gotoStep(0); return; }
+      if (res.status === 401){ setToken(""); }     // stale/invalid token
+    }
+    showEditor(false);
+    $("#gateMsg").textContent = "";
+    $("#adminToken").value = "";
+    $("#adminToken").focus();
+  }
+  async function loadKitFromServer(){
+    try{
+      const r = await fetch("/api/brand", { headers: adminHeaders() });
+      if (r.ok){ const d = await r.json(); kit = d.kit ? Object.assign(blankKit(), d.kit) : blankKit(); return { ok:true }; }
+      const d = await r.json().catch(()=>({}));
+      return { ok:false, status:r.status, error:d.error };
+    }catch(e){ return { ok:false, status:0, error:"Couldn't reach the server." }; }
+  }
+  $("#unlockBtn").addEventListener("click", unlock);
+  $("#adminToken").addEventListener("keydown", e => { if (e.key === "Enter") unlock(); });
+  async function unlock(){
+    const t = $("#adminToken").value.trim();
+    if (!t){ $("#gateMsg").textContent = "Enter the admin token."; return; }
+    setToken(t);
+    const res = await loadKitFromServer();
+    if (res.ok){ showEditor(true); kitToForm(); gotoStep(0); }
+    else {
+      setToken("");
+      $("#gateMsg").textContent = res.status === 401
+        ? "That token wasn't accepted."
+        : (res.error || "Couldn't unlock the editor.");
+    }
   }
 
   /* ---------- Backend status ---------- */
@@ -669,11 +722,13 @@
   });
   $("#modelSelect").addEventListener("change", e => $("#modelBadge").textContent = e.target.value);
 
-  function renderKitChip(){
+  async function renderKitChip(){
     const chip = $("#kitChip");
-    if (kit && (kit.name || kit.refs.length || kit.styleFamily || kit.palette.length)){
+    let status = { exists:false, name:"" };
+    try { status = await (await fetch("/api/brand/status")).json(); } catch(e){}
+    if (status.exists){
       chip.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="var(--ok)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Brand kit active${kit.name ? ": <b>"+escapeHtml(kit.name)+"</b>" : ""} · <a data-go-brand>edit</a>`;
+        Brand kit active${status.name ? ": <b>"+escapeHtml(status.name)+"</b>" : ""} · <a data-go-brand>edit</a>`;
     } else {
       chip.innerHTML = `No brand kit yet — <a data-go-brand>set one up</a> so results match your style.`;
     }
@@ -694,12 +749,11 @@
     btn.disabled = true;
     renderSkeletons(count);
 
+    // The server attaches the saved brand style — the browser only sends the ask.
     const body = {
       prompt,
       n: count,
       model: $("#modelSelect").value,
-      instructions: kit ? activeInstructions(kit) : undefined,
-      references: kit && kit.refs.length ? kit.refs.map(r => ({ base64: stripData(r.data) })) : undefined,
     };
 
     try{
@@ -979,10 +1033,10 @@
     $("#testHint").textContent = "Working…";
     try{
       const r = await fetch("/api/generate", {
-        method:"POST", headers:{"Content-Type":"application/json"},
+        method:"POST", headers: adminHeaders({"Content-Type":"application/json"}),
         body: JSON.stringify({
           prompt: "a simple emblem of a mountain inside a circle",
-          n:1, model:$("#modelSelect").value, instructions,
+          n:1, model:$("#modelSelect").value, preview:true, instructions,
           references: kit.refs.length ? kit.refs.map(x=>({base64:stripData(x.data)})) : undefined,
         }),
       });
@@ -998,12 +1052,25 @@
     finally{ btn.disabled=false; btn.textContent="Generate a test mark"; }
   });
 
-  $("#saveKit").addEventListener("click", () => {
+  $("#saveKit").addEventListener("click", async () => {
     formToKit();
     const edited = ($("#compiled").textContent || "").trim();
     // Store the box as an override only if it diverges from the compiled version.
     kit.customInstructions = (edited && edited !== compileInstructions(kit)) ? edited : "";
-    if (saveKitToStorage()){ toast("Brand kit saved."); switchView("create"); }
+    // Bake the final instruction string the server will use, so it never re-compiles.
+    kit.instructions = activeInstructions(kit) || "";
+    const btn = $("#saveKit"); btn.disabled = true; btn.textContent = "Saving…";
+    try{
+      const r = await fetch("/api/brand", {
+        method:"PUT", headers: adminHeaders({"Content-Type":"application/json"}),
+        body: JSON.stringify({ kit }),
+      });
+      const d = await r.json().catch(()=>({}));
+      if (r.ok){ toast("Brand kit saved."); switchView("create"); }
+      else if (r.status === 401){ toast("Session expired — unlock again."); setToken(""); enterBrand(); }
+      else { toast(d.error || "Couldn't save the brand kit."); }
+    }catch(e){ toast("Couldn't reach the server."); }
+    finally{ btn.disabled = false; btn.textContent = "Save brand kit"; }
   });
 
   // Discard hand edits and rebuild guidance from the structured choices.
