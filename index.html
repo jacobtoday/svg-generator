@@ -408,22 +408,7 @@
       <p>Add a few samples and a handful of choices once. Every image you create afterwards is steered to match — so prompts stay short and results stay on-brand.</p>
     </div>
 
-    <!-- Admin gate -->
-    <div class="panel panel--pad" id="adminGate">
-      <h2>Admin access</h2>
-      <p class="sub">Editing the brand kit is restricted. Enter the admin token to continue.</p>
-      <div class="row" style="align-items:flex-end">
-        <div class="col" style="max-width:340px">
-          <label class="lbl">Admin token</label>
-          <input class="input-text" id="adminToken" type="password" placeholder="••••••••••" autocomplete="off" />
-        </div>
-        <button class="btn btn--primary" id="unlockBtn">Unlock</button>
-      </div>
-      <p class="hint" id="gateMsg" style="margin-top:12px"></p>
-    </div>
-
-    <!-- Editor (revealed after unlock) -->
-    <div id="editor" style="display:none">
+    <div id="editor">
     <div class="steps" id="steps">
       <div class="step is-active" data-step="0"><span class="step__n">1</span> Samples</div>
       <div class="step" data-step="1"><span class="step__n">2</span> Style</div>
@@ -632,17 +617,13 @@
   }
 
   /* ---------- Tiny state ---------- */
-  const TOKEN_KEY = "vs_admin_token";
-  let kit = null;          // working copy, loaded from the server on unlock
+  let kit = null;          // working copy, loaded from the server
   let count = 1;
 
   function blankKit(){
     return { name:"", palette:[], styleFamily:"", fill:"", corners:"",
              stroke:"", detail:"", mood:[], avoid:"", notes:"", refs:[] };
   }
-  function getToken(){ try { return sessionStorage.getItem(TOKEN_KEY) || ""; } catch(e){ return ""; } }
-  function setToken(t){ try { t ? sessionStorage.setItem(TOKEN_KEY, t) : sessionStorage.removeItem(TOKEN_KEY); } catch(e){} }
-  function adminHeaders(extra){ return Object.assign({ "x-admin-token": getToken() }, extra || {}); }
 
   /* ---------- Toast ---------- */
   let toastTimer;
@@ -661,45 +642,18 @@
     window.scrollTo({top:0, behavior:"smooth"});
   }
 
-  /* ---------- Brand gate: unlock + load from server ---------- */
-  function showEditor(on){
-    $("#adminGate").style.display = on ? "none" : "block";
-    $("#editor").style.display = on ? "block" : "none";
-  }
+  /* ---------- Brand kit: load from server ---------- */
   async function enterBrand(){
-    // If we already hold a token, try to load straight into the editor.
-    if (getToken()){
-      const res = await loadKitFromServer();
-      if (res.ok){ showEditor(true); kitToForm(); gotoStep(0); return; }
-      if (res.status === 401){ setToken(""); }     // stale/invalid token
-    }
-    showEditor(false);
-    $("#gateMsg").textContent = "";
-    $("#adminToken").value = "";
-    $("#adminToken").focus();
+    await loadKitFromServer();   // populates `kit`
+    kitToForm();
+    gotoStep(0);
   }
   async function loadKitFromServer(){
     try{
-      const r = await fetch("/api/brand", { headers: adminHeaders() });
-      if (r.ok){ const d = await r.json(); kit = d.kit ? Object.assign(blankKit(), d.kit) : blankKit(); return { ok:true }; }
-      const d = await r.json().catch(()=>({}));
-      return { ok:false, status:r.status, error:d.error };
-    }catch(e){ return { ok:false, status:0, error:"Couldn't reach the server." }; }
-  }
-  $("#unlockBtn").addEventListener("click", unlock);
-  $("#adminToken").addEventListener("keydown", e => { if (e.key === "Enter") unlock(); });
-  async function unlock(){
-    const t = $("#adminToken").value.trim();
-    if (!t){ $("#gateMsg").textContent = "Enter the admin token."; return; }
-    setToken(t);
-    const res = await loadKitFromServer();
-    if (res.ok){ showEditor(true); kitToForm(); gotoStep(0); }
-    else {
-      setToken("");
-      $("#gateMsg").textContent = res.status === 401
-        ? "That token wasn't accepted."
-        : (res.error || "Couldn't unlock the editor.");
-    }
+      const r = await fetch("/api/brand");
+      if (r.ok){ const d = await r.json(); kit = d.kit ? Object.assign(blankKit(), d.kit) : blankKit(); return; }
+    }catch(e){}
+    if (!kit) kit = blankKit();  // editing still works even if load failed
   }
 
   /* ---------- Backend status ---------- */
@@ -1060,7 +1014,7 @@
     $("#testHint").textContent = "Working…";
     try{
       const r = await fetch("/api/generate", {
-        method:"POST", headers: adminHeaders({"Content-Type":"application/json"}),
+        method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
           prompt: "a simple emblem of a mountain inside a circle",
           n:1, model:$("#modelSelect").value, preview:true, instructions,
@@ -1089,12 +1043,11 @@
     const btn = $("#saveKit"); btn.disabled = true; btn.textContent = "Saving…";
     try{
       const r = await fetch("/api/brand", {
-        method:"PUT", headers: adminHeaders({"Content-Type":"application/json"}),
+        method:"PUT", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({ kit }),
       });
       const d = await r.json().catch(()=>({}));
       if (r.ok){ toast("Brand kit saved."); switchView("create"); }
-      else if (r.status === 401){ toast("Session expired — unlock again."); setToken(""); enterBrand(); }
       else { toast(d.error || "Couldn't save the brand kit."); }
     }catch(e){ toast("Couldn't reach the server."); }
     finally{ btn.disabled = false; btn.textContent = "Save brand kit"; }

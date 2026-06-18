@@ -14,41 +14,31 @@ Browser ──▶  /api/generate (your server)  ──▶  api.quiver.ai
 The browser never sees the API key. It calls your own `/api/*` routes; the server attaches the
 bearer token and forwards to Quiver.
 
-**Brand styling** is captured once in the in-app **Brand kit** flow (admin-only):
+**Brand styling** is captured once in the in-app **Brand kit** flow:
 - up to 4 sample images → sent as Quiver `references`
 - palette + style choices → compiled into the Quiver `instructions` string
 
 The kit is stored in Postgres and applied **server-side** on every generation, so end
-users only send a prompt — they can't see or change the brand style. Editing the kit
-requires `ADMIN_TOKEN`.
+users only send a prompt. The Brand kit editor is open (no login).
 
-## Run locally
+## Deploy on Railway (dashboard + GitHub website — no terminal)
 
-```bash
-npm install
-export QUIVERAI_API_KEY="sk_live_..."   # never commit this
-export DATABASE_URL="postgresql://..."  # optional; enables saving the brand kit
-export ADMIN_TOKEN="a-long-random-string"
-npm start                               # http://localhost:3000
-```
-
-## Deploy to Railway
-
-1. Push this folder to a repo and create a Railway service from it.
-2. **Add a Postgres database** to the project (New → Database → PostgreSQL). Railway
-   exposes its connection string as `DATABASE_URL`.
-3. On the app service, add variables:
+1. In **GitHub**, create a repo and upload these files (keep `index.html` inside a
+   `public/` folder). Use the repo's **Add file → Upload files** button.
+2. In **Railway**, New Project → **Deploy from GitHub repo** → pick the repo.
+3. Add a **PostgreSQL** database: in the project, **New → Database → PostgreSQL**.
+   Railway sets `DATABASE_URL` automatically.
+4. On the app service → **Variables**, add:
    - `QUIVERAI_API_KEY` = your Quiver key
-   - `DATABASE_URL` = reference the Postgres service's `DATABASE_URL`
-   - `ADMIN_TOKEN` = a long random string (your brand-kit password)
-4. Deploy. On boot the server creates the `brand_kits` table automatically.
-5. Settings → Networking → Generate Domain.
+   - `DATABASE_URL` = reference the Postgres service's `DATABASE_URL` variable
+5. **Settings → Networking → Generate Domain.**
 
-The table is created on first boot — no migration step needed.
+The `brand_kits` table is created automatically on first boot — no migration step.
 
 ## Reskin for a new client (the whole job)
 
-Edit one block at the top of `public/index.html`:
+Edit one block at the top of `public/index.html` (do it in the GitHub website — open the
+file, click the pencil ✏️, change these lines, Commit):
 
 ```js
 window.THEME = {
@@ -60,9 +50,9 @@ window.THEME = {
 };
 ```
 
-Then give that client their own deploy with their own `QUIVERAI_API_KEY`. One deploy per client
-keeps each one inside their own Quiver rate limit (20 req/60s is **per organisation**) and bills
-to their own account.
+For each client, duplicate the repo and give it its own Railway project with its own
+`QUIVERAI_API_KEY`. One project per client keeps each inside their own Quiver rate limit
+(20 req/60s is **per organisation**) and bills to their own account.
 
 ## Notes worth knowing
 
@@ -80,7 +70,7 @@ to their own account.
 
 ```
 server.js            Express proxy + Postgres brand kit + static host
-public/index.html    The whole app (UI, admin brand-kit editor, generate) + THEME block
+public/index.html    The whole app (UI, brand-kit editor, generate) + THEME block
 package.json
 .env.example
 ```

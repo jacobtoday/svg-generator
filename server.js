@@ -4,13 +4,12 @@
  *
  * The Quiver API key NEVER reaches the browser. End users call /api/generate
  * with just a prompt; the server attaches the saved brand style and forwards
- * to https://api.quiver.ai. Editing the brand kit requires ADMIN_TOKEN.
+ * to https://api.quiver.ai.
  *
  * Required env:
  *   QUIVERAI_API_KEY   your sk_live_... key (server-side only)
  * For brand-kit persistence:
  *   DATABASE_URL       Postgres connection string (Railway provides this)
- *   ADMIN_TOKEN        shared secret required to view/edit the brand kit
  * Optional:
  *   PORT (default 3000), QUIVER_MODEL (arrow-1.1), MAX_IMAGES (5)
  */
@@ -25,14 +24,12 @@ app.use(express.json({ limit: "25mb" })); // base64 reference images can be larg
 
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.QUIVERAI_API_KEY;
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
 const QUIVER_BASE = "https://api.quiver.ai/v1";
 const DEFAULT_MODEL = process.env.QUIVER_MODEL || "arrow-1.1";
 const MAX_IMAGES = clampInt(process.env.MAX_IMAGES, 5, 1, 16);
 const KIT_ID = "default"; // one kit per deploy
 
 if (!API_KEY) console.warn("[warn] QUIVERAI_API_KEY is not set. /api/generate returns 503 until configured.");
-if (!ADMIN_TOKEN) console.warn("[warn] ADMIN_TOKEN is not set. The brand kit can't be edited until it is.");
 
 /* ------------------------------------------------------------------ *
  * Postgres — single-row brand kit store. Degrades gracefully if there
@@ -94,22 +91,8 @@ async function saveKit(data) {
 }
 
 /* ------------------------------------------------------------------ *
- * Auth + rate limiting
+ * Rate limiting
  * ------------------------------------------------------------------ */
-function isAdmin(req) {
-  const token = req.get("x-admin-token");
-  return Boolean(ADMIN_TOKEN) && token === ADMIN_TOKEN;
-}
-function adminGuard(req, res, next) {
-  if (!ADMIN_TOKEN) {
-    return res.status(503).json({ error: "Brand kit editing is disabled. Set ADMIN_TOKEN and redeploy." });
-  }
-  if (!isAdmin(req)) {
-    return res.status(401).json({ error: "Incorrect or missing admin token." });
-  }
-  next();
-}
-
 const RL_MAX = 18;
 const RL_WINDOW_MS = 60000;
 let rlHits = [];
@@ -176,7 +159,6 @@ app.get("/api/config", (req, res) => {
     defaultModel: DEFAULT_MODEL,
     maxImages: MAX_IMAGES,
     persistence: Boolean(pool),
-    adminConfigured: Boolean(ADMIN_TOKEN),
   });
 });
 
@@ -198,15 +180,15 @@ app.get("/api/brand/status", async (req, res) => {
   res.json({ exists: Boolean(kit), name: (kit && kit.name) || "" });
 });
 
-/* Admin: load the full kit for editing. */
-app.get("/api/brand", adminGuard, async (req, res) => {
+/* Load the full kit for editing. */
+app.get("/api/brand", async (req, res) => {
   if (!pool) return res.status(503).json({ error: "Persistence is disabled. Set DATABASE_URL and redeploy." });
   const kit = await getKit();
   res.json({ kit: kit || null });
 });
 
-/* Admin: save the kit. */
-app.put("/api/brand", adminGuard, async (req, res) => {
+/* Save the kit. */
+app.put("/api/brand", async (req, res) => {
   if (!pool) return res.status(503).json({ error: "Persistence is disabled. Set DATABASE_URL and redeploy." });
   const kit = req.body && req.body.kit;
   if (!kit || typeof kit !== "object") {
@@ -221,7 +203,7 @@ app.put("/api/brand", adminGuard, async (req, res) => {
 });
 
 /* Generate 1–5 SVGs. Public callers get the stored brand style applied
- * server-side. Admins may pass preview instructions/references to test an
+ * server-side. The brand editor may pass preview instructions/references to test an
  * unsaved kit. */
 app.post("/api/generate", async (req, res) => {
   if (!API_KEY) {
@@ -239,8 +221,9 @@ app.post("/api/generate", async (req, res) => {
   const count = clampInt(n, 1, 1, MAX_IMAGES);
   const payload = { model, prompt: prompt.trim(), n: count, stream: false };
 
-  // Admin preview of an unsaved kit, vs. the stored kit for everyone else.
-  if (preview && isAdmin(req)) {
+  // A preview request (the brand editor's test mark) uses the inline kit being
+  // edited; everyone else gets the saved kit applied server-side.
+  if (preview) {
     if (pvInstructions && String(pvInstructions).trim()) payload.instructions = String(pvInstructions).trim();
     if (Array.isArray(pvReferences) && pvReferences.length) payload.references = pvReferences.slice(0, 4);
   } else {
